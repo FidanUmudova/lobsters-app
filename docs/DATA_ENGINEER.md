@@ -1,0 +1,202 @@
+# 📡 Data Engineer Guide
+
+## Your mission
+
+Build a pipeline that pulls the hottest current posts from **Lobsters** (lobste.rs),
+a programming-focused link aggregator, and stores them in a local SQLite database,
+so the backend can read them later.
+
+Your code lives in `data-pipeline/`. You never touch Flask or HTML — your job ends
+once clean data is sitting in `lobsters.db`.
+
+---
+
+## Your three layers
+
+```
+fetcher.py  →  transformer.py  →  loader.py
+(get raw       (clean it up       (save it to
+ JSON from      into our           the database)
+ Lobsters)      schema)
+```
+
+### 1. `pipeline/models.py` — the schema (do this FIRST)
+
+This defines the `posts` table. Every other file depends on this being correct.
+Once you've filled in the TODOs here, **send this file to your Backend teammate**
+so they can copy the same schema into their own `models.py`.
+
+### 2. `pipeline/fetcher.py` — talk to Lobsters
+
+Lobsters has a simple, fully public JSON endpoint — no login, no API key, no OAuth:
+
+```
+https://lobste.rs/hottest.json
+```
+
+It returns a flat JSON array of the current front-page stories, already ranked by
+Lobsters' own "hottest" algorithm (a mix of score and recency). There's no "top this
+month" time-window parameter like some other sites have — `hottest.json` always
+gives you the current front page, and that's what we treat as our "top posts".
+
+It's good practice to still send a descriptive `User-Agent` header identifying your
+app, even though Lobsters doesn't strictly require one the way some other sites do.
+
+### 3. `pipeline/transformer.py` — clean the data
+
+Lobsters' raw JSON has some fields we don't need, and one important bit of nesting:
+the username is inside a `submitter_user` object, not a flat field. This layer's
+job is to pull out exactly the fields we care about and reshape them to match our
+`models.py` schema — nothing more.
+
+This layer should be the easiest to test, because it's pure logic: dict in, dict out,
+no network, no database.
+
+### 4. `pipeline/loader.py` — save to the database
+
+Takes the clean list of dicts and writes them into `lobsters.db` using SQLAlchemy.
+
+One important real-world detail: **if you run the pipeline twice, you shouldn't get
+duplicate rows.** Posts you've already seen should have their score/comment count
+updated instead. This is called an **upsert** (update-or-insert), and it's a very
+common pattern any time a pipeline might re-process the same data more than once.
+
+---
+
+## How to run your work
+
+```bash
+cd data-pipeline
+pip install -r requirements.txt
+
+# Run the whole pipeline end to end:
+python run_pipeline.py
+
+# Or test each layer individually as you build it:
+python tests/test_transformer.py   # no internet needed — uses sample_lobsters_response.json
+python tests/test_fetcher.py        # no internet needed — mocks the network call
+python tests/test_loader.py         # uses a temporary test database, not your real one
+```
+
+**Recommended build order:** `transformer.py` first (no dependencies, pure logic),
+then `models.py` + `db.py`, then `loader.py`, then `fetcher.py` last (since it needs
+the real internet to fully verify, even though its test is mocked).
+
+---
+
+## A note on the sample data file
+
+`tests/sample_lobsters_response.json` is a small, fixed, fake example of what
+Lobsters' real response looks like. We use it instead of the live API in tests
+because:
+
+- Tests run instantly, with no network delay
+- Tests don't fail just because your WiFi is down
+- Tests give you the exact same result every single time, which makes debugging easier
+
+This is a standard pattern in real data engineering: capture one real example of your
+data source's output, save it, and test your transformation logic against that fixed
+snapshot.
+
+---
+
+## Understanding the raw data shape
+
+Lobsters returns a **flat JSON array** — not a deeply nested object like some other
+sites' APIs. One story looks like this (trimmed to the fields we care about):
+
+```json
+{
+  "short_id": "xacdsk",
+  "title": "Secret EU law threatens Internet security",
+  "url": "https://last-chance-for-eidas.org/",
+  "score": 32,
+  "comment_count": 16,
+  "comments_url": "https://lobste.rs/s/xacdsk/secret_eu_law_threatens_internet",
+  "created_at": "2023-11-02T03:47:05.000-05:00",
+  "submitter_user": {
+    "username": "galadran"
+  }
+}
+```
+
+Mapping this to our schema:
+
+| Our schema field | Comes from | Notes |
+|---|---|---|
+| `post_id` | `short_id` | Already short and unique — no prefix needed |
+| `title` | `title` | Direct copy |
+| `author` | `submitter_user.username` | **Nested** — one level deeper than the rest |
+| `score` | `score` | Direct copy |
+| `num_comments` | `comment_count` | Different field name |
+| `url` | `url` | Direct copy |
+| `permalink` | `comments_url` | Already a full URL — don't prepend anything |
+| `created_utc` | `created_at` | An ISO 8601 **string** — must be converted to a Unix timestamp float |
+| `fetched_at` | *(generated by us)* | When our pipeline ran, not part of Lobsters' data |
+
+---
+
+## Common pitfalls
+
+- **Forgetting `author` is nested.** It's `raw_post_data["submitter_user"]["username"]`,
+  not a flat `raw_post_data["author"]`. This trips people up because most of the
+  other fields are flat.
+- **Re-prepending a domain to `permalink`.** Unlike some other APIs, Lobsters'
+  `comments_url` is already a complete, absolute URL. Adding `https://lobste.rs` in
+  front of it would produce a broken double URL.
+- **Treating `created_at` as a number.** It's a string in ISO 8601 format
+  (`"2023-11-02T03:47:05.000-05:00"`), not a Unix timestamp like some other APIs use.
+  You need `datetime.fromisoformat(...)` and then `.timestamp()` to convert it to the
+  float our schema expects.
+- **Running the pipeline before `models.py` is finished.** `loader.py` imports `Post`
+  from `models.py`, so the schema must be complete first.
+- **Confusing `created_utc` and `fetched_at`.** `created_utc` comes from Lobsters
+  (when the post was originally submitted there). `fetched_at` is generated by YOUR
+  code (when you pulled the data).
+- **Forgetting `transform_posts` takes a flat list, not a nested dict.** Lobsters'
+  raw response is just `[ {...}, {...}, ... ]` — there's no `.data.children` wrapper
+  to dig through like some other APIs have.
+
+---
+
+## Troubleshooting: "I'm getting a 403 Forbidden / connection error from Lobsters"
+
+This is less common than with some other APIs, since Lobsters' `.json` endpoints are
+intentionally public and don't require authentication — but it can still happen
+(temporary outages, aggressive school/shared network filtering, or being rate-limited
+if you've been re-running the pipeline very frequently). Try these in order:
+
+1. **Check your User-Agent is set.** It should look like
+   `"python:your-app-name:v1.0 (by /u/your_username)"`, not the `requests` library's
+   bare default. Open `pipeline/fetcher.py` and confirm `USER_AGENT` is set.
+
+2. **Try the URL directly in a browser tab.** If `https://lobste.rs/hottest.json`
+   loads fine there but not in your script, the problem is specific to your script's
+   request (headers, or a corporate/school proxy blocking non-browser traffic) rather
+   than Lobsters being down.
+
+3. **Wait a bit and try again.** If you've been re-running the pipeline a lot while
+   testing, you may be temporarily rate-limited.
+
+4. **If none of that works during class time, don't get stuck on this.** Your
+   `transformer.py` and `loader.py` work can be fully built and tested without ever
+   touching the live Lobsters API — `tests/sample_lobsters_response.json` gives you a
+   real example response to develop against. You can finish and test those two
+   layers, and circle back to a live `fetcher.py` run later.
+
+This is also a realistic lesson in its own right: **any pipeline that depends on an
+external API needs to handle that API being unreliable.** Production data pipelines
+almost always have retry logic and fallback behavior for exactly this reason.
+
+---
+
+## Once you're done
+
+Run all three test files and confirm everything passes, then run:
+
+```bash
+python run_pipeline.py
+```
+
+Check that `lobsters.db` was created in the project root (`lobsters-app/lobsters.db`).
+That's your hand-off point to the Backend team — they'll read from this exact file.
