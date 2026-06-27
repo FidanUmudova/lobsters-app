@@ -29,20 +29,18 @@ def get_top_posts(limit: int = 10) -> list:
 
     Returns:
         list[Post]: A list of Post ORM objects, ordered by score descending.
-
-    TODO:
-        - Get a session: session = get_session()
-        - Query posts ordered by score descending, limited to `limit`:
-              posts = (
-                  session.query(Post)
-                  .order_by(Post.score.desc())
-                  .limit(limit)
-                  .all()
-              )
-        - Close the session: session.close()
-        - Return posts
     """
-    pass  # Remove this line when you implement the function
+    session = get_session()
+
+    posts = (
+        session.query(Post)
+        .order_by(Post.score.desc())
+        .limit(limit)
+        .all()
+    )
+
+    session.close()
+    return posts
 
 
 def get_post_by_id(post_id: str):
@@ -54,14 +52,13 @@ def get_post_by_id(post_id: str):
 
     Returns:
         Post | None: The matching Post object, or None if not found.
-
-    TODO:
-        - Get a session: session = get_session()
-        - Query for the post: post = session.query(Post).filter_by(post_id=post_id).first()
-        - Close the session: session.close()
-        - Return post
     """
-    pass  # Remove this line when you implement the function
+    session = get_session()
+
+    post = session.query(Post).filter_by(post_id=post_id).first()
+
+    session.close()
+    return post
 
 
 def count_posts() -> int:
@@ -71,11 +68,10 @@ def count_posts() -> int:
 
     Returns:
         int: Total row count in the posts table.
-
-    TODO:
-        - Get a session: session = get_session()
-        - Count rows: count = session.query(Post).count()
-        - Close the session: session.close()
-        - Return count
     """
-    pass  # Remove this line when you implement the function
+    session = get_session()
+
+    count = session.query(Post).count()
+
+    session.close()
+    return count

@@ -33,16 +33,12 @@ def get_top_posts():
 
     Expected JSON response:
         { "success": true, "data": [...], "count": 10 }
-
-    TODO:
-        - Read the `limit` query parameter:
-              limit = request.args.get("limit", default=10, type=int)
-        - Call service.get_top_posts_for_api(limit)
-        - Return it as JSON: return jsonify(result)
-          (Flask's jsonify automatically sets the right content type
-          and status code 200 for a successful dict response)
     """
-    pass  # Remove this line when you implement the function
+    limit = request.args.get("limit", default=10, type=int)
+
+    result = service.get_top_posts_for_api(limit)
+
+    return jsonify(result)
 
 
 @app.route("/api/posts/<string:post_id>", methods=["GET"])
@@ -56,15 +52,13 @@ def get_post(post_id):
         { "success": true, "data": {...} }
     Expected JSON response on failure (404):
         { "success": false, "error": "Post not found." }
-
-    TODO:
-        - Call service.get_single_post_for_api(post_id)
-        - If result["success"] is False:
-              return jsonify(result), 404
-        - Otherwise:
-              return jsonify(result), 200
     """
-    pass  # Remove this line when you implement the function
+    result = service.get_single_post_for_api(post_id)
+
+    if result["success"] is False:
+        return jsonify(result), 404
+
+    return jsonify(result), 200
 
 
 @app.route("/api/stats", methods=["GET"])
@@ -77,12 +71,10 @@ def get_stats():
 
     Expected JSON response:
         { "success": true, "data": { "total_posts": 10 } }
-
-    TODO:
-        - Call service.get_stats_for_api()
-        - Return it as JSON: return jsonify(result)
     """
-    pass  # Remove this line when you implement the function
+    result = service.get_stats_for_api()
+
+    return jsonify(result)
 
 
 @app.route("/api/health", methods=["GET"])
