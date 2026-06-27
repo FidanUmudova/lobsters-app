@@ -28,7 +28,6 @@ from pipeline.db import get_session
 
 
 def load_posts(posts: list) -> dict:
-    def load_posts(posts: list) -> dict:
     session = get_session()
 
     inserted = 0
