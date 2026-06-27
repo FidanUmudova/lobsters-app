@@ -39,51 +39,14 @@ LOBSTERS_HOTTEST_URL = "https://lobste.rs/hottest.json"
 
 
 def fetch_top_posts_raw(limit: int = 10) -> list:
-    """
-    Fetches the raw "hottest" stories JSON from Lobsters.
+    headers = {"User-Agent": USER_AGENT}
 
-    Args:
-        limit (int): How many stories we ultimately want to keep.
-                     Lobsters' hottest.json always returns its full
-                     front-page list (usually 25) in one response —
-                     there's no `limit` query param to ask for fewer.
-                     We still accept `limit` here so the function
-                     signature matches how the rest of the pipeline
-                     calls it; trimming to `limit` happens in Layer 2
-                     (the transformer), not here.
+    response = requests.get(
+        LOBSTERS_HOTTEST_URL,
+        headers=headers,
+        timeout=10
+    )
 
-    Returns:
-        list: The raw parsed JSON response from Lobsters — a LIST of
-              story dicts (there's no wrapping "data" object; Lobsters
-              just returns a flat JSON array).
+    response.raise_for_status()
 
-    Raises:
-        requests.HTTPError: If Lobsters responds with an error status code.
-
-    TODO:
-        - Build a `headers` dict: {"User-Agent": USER_AGENT}
-        - Call requests.get(LOBSTERS_HOTTEST_URL, headers=headers, timeout=10)
-        - Call response.raise_for_status() to raise an error on bad status codes
-        - Return response.json()
-
-    HINT: Lobsters' JSON shape looks like this (simplified, one story):
-        [
-          {
-            "short_id": "xacdsk",
-            "title": "Secret EU law threatens Internet security",
-            "url": "https://last-chance-for-eidas.org/",
-            "score": 32,
-            "comment_count": 16,
-            "comments_url": "https://lobste.rs/s/xacdsk/secret_eu_law...",
-            "created_at": "2023-11-02T03:47:05.000-05:00",
-            "submitter_user": { "username": "galadran", ... },
-            "tags": ["browsers", "cryptography"]
-          },
-          { ... },
-          ...
-        ]
-        It's a flat list — no nested wrapper object to dig through.
-        You don't need to unpack anything here — that's Layer 2's job.
-        Just return the whole raw list.
-    """
-    pass  # Remove this line when you implement the function
+    return response.json()
