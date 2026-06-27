@@ -31,8 +31,5 @@ def get_session():
 
     Returns:
         Session: A new SQLAlchemy session instance.
-
-    TODO:
-        - Return SessionLocal()
     """
-    pass  # Remove this line when you implement the function
+    return SessionLocal()
