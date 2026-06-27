@@ -33,7 +33,22 @@ def load_posts(posts: list) -> dict:
     inserted = 0
     updated = 0
 
+<<<<<<< HEAD
     for post in posts:
+=======
+    Returns:
+        dict: Summary of what happened:
+              {"inserted": X, "updated": Y, "total": Z}
+    """
+
+    session = get_session()
+
+    inserted = 0
+    updated = 0
+
+    for post in posts:
+        # check if post already exists
+>>>>>>> feature/data-pipeline
         existing = (
             session.query(Post)
             .filter_by(post_id=post["post_id"])
@@ -41,10 +56,18 @@ def load_posts(posts: list) -> dict:
         )
 
         if existing:
+<<<<<<< HEAD
+=======
+            # update existing record
+>>>>>>> feature/data-pipeline
             existing.score = post["score"]
             existing.num_comments = post["num_comments"]
             updated += 1
         else:
+<<<<<<< HEAD
+=======
+            # create new record
+>>>>>>> feature/data-pipeline
             new_post = Post(
                 post_id=post["post_id"],
                 title=post["title"],
@@ -60,6 +83,10 @@ def load_posts(posts: list) -> dict:
             session.add(new_post)
             inserted += 1
 
+<<<<<<< HEAD
+=======
+    # save changes
+>>>>>>> feature/data-pipeline
     session.commit()
     session.close()
 
@@ -67,4 +94,8 @@ def load_posts(posts: list) -> dict:
         "inserted": inserted,
         "updated": updated,
         "total": len(posts),
+<<<<<<< HEAD
     }
+=======
+    }
+>>>>>>> feature/data-pipeline

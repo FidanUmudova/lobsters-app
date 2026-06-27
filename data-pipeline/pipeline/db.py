@@ -29,28 +29,8 @@ engine = create_engine(DATABASE_URL, echo=False)
 # conversation with the database (think: one transaction).
 SessionLocal = sessionmaker(bind=engine)
 
-
 def init_db():
-    """
-    Creates all tables defined in models.py if they don't already exist.
-    Safe to call multiple times — it won't duplicate or wipe tables.
-
-    TODO:
-        - Call Base.metadata.create_all(bind=engine)
-    """
-    pass  # Remove this line when you implement the function
-
+    Base.metadata.create_all(bind=engine)
 
 def get_session():
-    """
-    Returns a new SQLAlchemy session for talking to the database.
-    Caller is responsible for closing it (or use it in a `with` block
-    if you upgrade to that pattern later).
-
-    Returns:
-        Session: A new SQLAlchemy session instance.
-
-    TODO:
-        - Return SessionLocal()
-    """
-    pass  # Remove this line when you implement the function
+    return SessionLocal()
