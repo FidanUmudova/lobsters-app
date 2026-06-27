@@ -41,4 +41,8 @@ return {
 
 
 def transform_posts(raw_json: list, limit: int = 10) -> list:
+<<<<<<< HEAD
     return [transform_post(post) for post in raw_json[:limit]]
+=======
+    return [transform_post(post) for post in raw_json[:limit]]
+>>>>>>> 880af99 (feat: implement transformer layer)
