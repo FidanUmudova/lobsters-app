@@ -57,18 +57,7 @@ class Post(Base):
 
     post_id = Column(String, unique=True, nullable=False)
 
-<<<<<<< HEAD
     title = Column(String, nullable=False)
-
-    author = Column(String, nullable=False)
-
-    core = Column(Integer, nullable=False)
-
-    num_comments = Column(Integer, nullable=False)
-
-    url = Column(String, nullable=False)
-=======
-    itle = Column(String, nullable=False)
 
     author = Column(String, nullable=False)
 
@@ -76,8 +65,18 @@ class Post(Base):
 
     num_comments = Column(Integer, nullable=False)
 
-    rl = Column(String, nullable=False)
->>>>>>> 880af99 (feat: implement transformer layer)
+    url = Column(String, nullable=False)
+
+    title = Column(String, nullable=False)
+
+    author = Column(String, nullable=False)
+
+    score = Column(Integer, nullable=False)
+
+    num_comments = Column(Integer, nullable=False)
+
+    url = Column(String, nullable=False)
+
 
     permalink = Column(String, nullable=False)
 
